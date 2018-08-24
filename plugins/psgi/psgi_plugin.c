@@ -1,5 +1,6 @@
 #include "psgi.h"
 
+
 extern char **environ;
 extern struct uwsgi_server uwsgi;
 
@@ -328,7 +329,7 @@ SV *build_psgi_env(struct wsgi_request *wsgi_req) {
 	HV *env = newHV();
 
 	// fill perl hash
-        for(i=0;i<wsgi_req->var_cnt;i++) {
+        for(i=0;i<wsgi_req->var_cnt;i+=2) {
                 if (wsgi_req->hvec[i+1].iov_len > 0) {
 
                         // check for multiline header
@@ -352,7 +353,6 @@ SV *build_psgi_env(struct wsgi_request *wsgi_req) {
                         if (!hv_store(env, wsgi_req->hvec[i].iov_base, wsgi_req->hvec[i].iov_len, newSVpv("", 0), 0)) goto clear;
                 }
                 //uwsgi_log("%.*s = %.*s\n", wsgi_req->hvec[i].iov_len, wsgi_req->hvec[i].iov_base, wsgi_req->hvec[i+1].iov_len, wsgi_req->hvec[i+1].iov_base);
-                i++;
         }
 
         // psgi.version
@@ -527,19 +527,19 @@ int uwsgi_perl_request(struct wsgi_request *wsgi_req) {
 			}
 
 	}
-	
+
 	if (wsgi_req->dynamic) {
                 if (uwsgi.threads > 1) {
                         pthread_mutex_unlock(&uperl.lock_loader);
                 }
         }
 
-		if (wsgi_req->app_id == -1) {
-			uwsgi_500(wsgi_req);	
-			uwsgi_log("--- unable to find perl application ---\n");
-			// nothing to clear/free
-			return UWSGI_OK;
-		}
+	if (wsgi_req->app_id == -1) {
+		uwsgi_500(wsgi_req);	
+		uwsgi_log("--- unable to find perl application ---\n");
+		// nothing to clear/free
+		return UWSGI_OK;
+	}
 
 	struct uwsgi_app *wi = &uwsgi_apps[wsgi_req->app_id];
 	wi->requests++;
@@ -594,7 +594,6 @@ clear2:
 	// clear response
 	SvREFCNT_dec(wsgi_req->async_result);
 clear:
-
 	FREETMPS;
 	LEAVE;
 
@@ -629,7 +628,6 @@ static void psgi_call_cleanup_hook(SV *hook, SV *env) {
 }
 
 void uwsgi_perl_after_request(struct wsgi_request *wsgi_req) {
-
 	log_request(wsgi_req);
 
 	// We may be called after an early exit in XS_coroae_accept_request, 

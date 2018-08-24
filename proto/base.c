@@ -9,6 +9,26 @@ int uwsgi_proto_raw_parser(struct wsgi_request *wsgi_req) {
 	return UWSGI_OK;
 }
 
+// before using you must be shure that buffer has as much free mem as you need. And you are copying into the right pointer.
+// pay attention that pointer will be changed insode the function
+// returns length of appended chars
+uint16_t unsafe_add_uwsgi_var_chunk_length(char *ptr, uint16_t chunk_len) {
+	*ptr++ = (uint8_t) (chunk_len & 0xff);
+	*ptr++ = (uint8_t) ((chunk_len >> 8) & 0xff);
+	return 2;
+}
+
+// before using you must be shure that buffer has as much free mem as you need. And you are copying into the right pointer.
+// pay attention that pointer will be changed insode the function
+// returns length of appended chars
+uint16_t unsafe_add_uwsgi_var_chunk(char *ptr, char *chunk, uint16_t chunk_len) {
+	ptr += unsafe_add_uwsgi_var_chunk_length(ptr, chunk_len);
+
+	memcpy(ptr, chunk, chunk_len);
+	ptr += chunk_len;
+	return 2 + chunk_len;
+}
+
 uint64_t proto_base_add_uwsgi_header(struct wsgi_request *wsgi_req, char *key, uint16_t keylen, char *val, uint16_t vallen) {
 
 
@@ -32,8 +52,8 @@ uint64_t proto_base_add_uwsgi_header(struct wsgi_request *wsgi_req, char *key, u
 			uwsgi_log("[WARNING] unable to add %.*s=%.*s to uwsgi packet, consider increasing buffer size\n", keylen, key, vallen, val);
 			return 0;
 		}
-		*ptr++ = (uint8_t) ((keylen + 5) & 0xff);
-		*ptr++ = (uint8_t) (((keylen + 5) >> 8) & 0xff);
+		ptr += unsafe_add_uwsgi_var_chunk_length(ptr, keylen);
+
 		memcpy(ptr, "HTTP_", 5);
 		ptr += 5;
 		memcpy(ptr, key, keylen);
@@ -45,10 +65,8 @@ uint64_t proto_base_add_uwsgi_header(struct wsgi_request *wsgi_req, char *key, u
 			uwsgi_log("[WARNING] unable to add %.*s=%.*s to uwsgi packet, consider increasing buffer size\n", keylen, key, vallen, val);
 			return 0;
 		}
-		*ptr++ = (uint8_t) (keylen & 0xff);
-		*ptr++ = (uint8_t) ((keylen >> 8) & 0xff);
-		memcpy(ptr, key, keylen);
-		ptr += keylen;
+
+		ptr += unsafe_add_uwsgi_var_chunk(ptr, key, keylen);
 	}
 
 	*ptr++ = (uint8_t) (vallen & 0xff);
@@ -63,7 +81,6 @@ uint64_t proto_base_add_uwsgi_header(struct wsgi_request *wsgi_req, char *key, u
 }
 
 
-
 uint64_t proto_base_add_uwsgi_var(struct wsgi_request * wsgi_req, char *key, uint16_t keylen, char *val, uint16_t vallen) {
 
 
@@ -76,15 +93,8 @@ uint64_t proto_base_add_uwsgi_var(struct wsgi_request * wsgi_req, char *key, uin
 		return 0;
 	}
 
-
-	*ptr++ = (uint8_t) (keylen & 0xff);
-	*ptr++ = (uint8_t) ((keylen >> 8) & 0xff);
-	memcpy(ptr, key, keylen);
-	ptr += keylen;
-
-	*ptr++ = (uint8_t) (vallen & 0xff);
-	*ptr++ = (uint8_t) ((vallen >> 8) & 0xff);
-	memcpy(ptr, val, vallen);
+	ptr += unsafe_add_uwsgi_var_chunk(ptr, key, keylen);
+	ptr += unsafe_add_uwsgi_var_chunk(ptr, val, vallen);
 
 #ifdef UWSGI_DEBUG
 	uwsgi_log("add uwsgi var: %.*s = %.*s\n", keylen, key, vallen, val);

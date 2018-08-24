@@ -27,7 +27,7 @@ static int uwsgi_proto_uwsgi_parser(struct wsgi_request *wsgi_req) {
 				return -1;
 			}
 		}
-		return UWSGI_AGAIN;
+	return UWSGI_AGAIN;
 	}
 	if (len < 0) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {

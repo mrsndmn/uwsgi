@@ -1673,7 +1673,9 @@ if __name__ == "__main__":
         build_plugin(options.plugin[0], uc, cflags, ldflags, libs, name)
     elif options.extra_plugin:
         print("*** uWSGI building and linking plugin from %s ***" % options.extra_plugin[0])
-        cflags = os.environ['UWSGI_PLUGINS_BUILDER_CFLAGS'].split() + os.environ.get("CFLAGS", "").split()
+        cflags = []
+        if 'UWSGI_PLUGINS_BUILDER_CFLAGS' in os.environ: cflags += os.environ['UWSGI_PLUGINS_BUILDER_CFLAGS'].split()
+        if 'CFLAGS' in os.environ:                       cflags += os.environ.get("CFLAGS", "").split()
         cflags.append('-I.uwsgi_plugins_builder/')
         ldflags = os.environ.get("LDFLAGS", "").split()
         name = None

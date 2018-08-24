@@ -10,6 +10,8 @@
 *.key
 *.orig
 *.rej
+.vstags
+.vscode/
 
 /uwsgi
 /uwsgibuild.*
@@ -29,3 +31,5 @@ core/dot_h.c
 /uWSGI.egg-info/
 check/check_*
 !check/*.c
+
+.uwsgi_plugins_builder/*
