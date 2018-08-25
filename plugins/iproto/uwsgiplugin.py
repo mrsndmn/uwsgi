@@ -1,9 +1,7 @@
-NAME = 'http'
+NAME = 'iproto'
 
 CFLAGS = []
 LDFLAGS = []
 LIBS = []
-
-REQUIRES = []
 
 GCC_LIST = ['iproto']
