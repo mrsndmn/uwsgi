@@ -728,7 +728,7 @@ class uConf(object):
             if not self.include_path:
                 raise
         except Exception:
-            self.include_path = ['/usr/include', '/usr/local/include']
+            self.include_path = ['/usr/include', '/usr/local/include', 'plugins/iproto']
 
         additional_include_paths = self.get('additional_include_paths')
         if additional_include_paths:
@@ -1430,6 +1430,7 @@ def build_plugin(path, uc, cflags, ldflags, libs, name=None):
 
     p_cflags = cflags[:]
     p_cflags += up['CFLAGS']
+    # p_cflags += '-DIPROTO'
 
     p_ldflags = ldflags[:]
     p_ldflags += up['LDFLAGS']
@@ -1551,7 +1552,7 @@ def build_plugin(path, uc, cflags, ldflags, libs, name=None):
         ' '.join(uniq_warnings(p_ldflags)),
         ' '.join(uniq_warnings(p_libs))
     )
-    print_compilation_output("[%s] %s.so" % (GCC, plugin_dest), gccline)
+    print_compilation_output("[%s] %s.so %s" % (GCC, plugin_dest, gccline), gccline)
 
     ret = os.system(gccline)
     if ret != 0:

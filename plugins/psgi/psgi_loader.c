@@ -535,12 +535,14 @@ clear2:
 int uwsgi_perl_add_app(struct wsgi_request *wsgi_req, char *app_name, PerlInterpreter **interpreters, SV **callables, time_t now) {
 	int id = uwsgi_apps_cnt;
         struct uwsgi_app *wi = NULL;
-
+	uwsgi_log("\n\nIN uwsgi_perl_add_app");
         if (wsgi_req) {
+		uwsgi_log("\n\nIN uwsgi_perl_add_app with wsgi_req");
                 // we need a copy of app_id
                 wi = uwsgi_add_app(id, psgi_plugin.modifier1, uwsgi_concat2n(wsgi_req->appid, wsgi_req->appid_len, "", 0), wsgi_req->appid_len, interpreters, callables);
         }
         else {
+		uwsgi_log("\n\nIN uwsgi_perl_add_app without wsgi_req");
                 wi = uwsgi_add_app(id, psgi_plugin.modifier1, "", 0, interpreters, callables);
         }
 
@@ -571,6 +573,7 @@ int uwsgi_perl_add_app(struct wsgi_request *wsgi_req, char *app_name, PerlInterp
 }
 
 void uwsgi_psgi_preinit_apps() {
+	uwsgi_log("\nIn void uwsgi_psgi_preinit_apps");
 	if (uperl.exec) {
 		PERL_SET_CONTEXT(uperl.main[0]);
                 perl_parse(uperl.main[0], xs_init, 3, uperl.embedding, NULL);
@@ -584,6 +587,7 @@ void uwsgi_psgi_preinit_apps() {
 }
 
 void uwsgi_psgi_app() {
+	uwsgi_log("\nIn void uwsgi_psgi_preinit_apps");
 
 	if (uperl.early_psgi_callable) {
 		uwsgi_perl_add_app(NULL, uperl.early_psgi_app_name, uperl.main, uperl.early_psgi_callable, uwsgi_now());	
