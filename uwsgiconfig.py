@@ -728,7 +728,7 @@ class uConf(object):
             if not self.include_path:
                 raise
         except Exception:
-            self.include_path = ['/usr/include', '/usr/local/include', 'plugins/iproto']
+            self.include_path = ['/usr/include', '/usr/local/include']
 
         additional_include_paths = self.get('additional_include_paths')
         if additional_include_paths:

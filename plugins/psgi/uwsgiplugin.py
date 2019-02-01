@@ -2,6 +2,7 @@ import os
 
 NAME = 'psgi'
 CFLAGS = os.popen('perl -MExtUtils::Embed -e ccopts').read().rstrip().split()
+CFLAGS = [ fl for fl in CFLAGS if not fl.startswith('-specs') ]
 LDFLAGS = os.popen('perl -MExtUtils::Embed -e ldopts').read().rstrip().split()
 LIBS = []
 for lib in LDFLAGS:
