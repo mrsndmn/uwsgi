@@ -10,12 +10,6 @@ extern struct uwsgi_perl uperl;
 struct uwsgi_perl uperl;
 #endif
 
-#define IPROTO
-
-#ifdef IPROTO
-#include "../iproto/iproto.h"
-#endif
-
 struct uwsgi_plugin psgi_plugin;
 
 static void uwsgi_opt_plshell(char *opt, char *value, void *foobar) {
@@ -376,25 +370,6 @@ SV *build_psgi_env(struct wsgi_request *wsgi_req) {
         if (!hv_store(env, "psgi.run_once",  13, &PL_sv_no,  0)) goto clear;
         if (!hv_store(env, "psgi.streaming", 14, &PL_sv_yes, 0)) goto clear;
         if (!hv_store(env, "psgix.cleanup",  13, &PL_sv_yes, 0)) goto clear;
-// todo remove everything should be converted to uwsgi
-#ifdef IPROTO
-	// uwsgi_log("in comparing wsgi_req->protocol == iproto: [%s]{}[] !!\n", wsgi_req->scheme, );
-	// todo or proto
-	if (!strcmp(wsgi_req->scheme, "iproto")) {
-		uwsgi_log("{PSGI} in wsgi_req->protocol == iproto!!\n");
-		struct iproto_header *ih = (struct iproto_header *) wsgi_req->buffer;
-// #ifdef UWSGI_DEBUG
-		uwsgi_log("{PSGI} iproto req body_length = %d\n", ih->body_length);
-		uwsgi_log("{PSGI} iproto req body = %.*X\n", ih->body_length, wsgi_req->buffer + ih_len);
-// #endif
-
-		SV *iproto_body;
-		iproto_body = newSVpv(wsgi_req->buffer + ih_len, ih->body_length);
-		if (!hv_store(env, "psgi.iproto_body",     16, iproto_body, 0))              goto clear;
-		if (!hv_store(env, "psgi.iproto_req_id",   18, newSViv(ih->request_id), 0))  goto clear;
-		if (!hv_store(env, "psgi.iproto_req_type", 20, newSViv(ih->type), 0))        goto clear;
-	}
-#endif
 
 	SV *us;
         // psgi.url_scheme, honour HTTPS var or UWSGI_SCHEME
@@ -523,7 +498,7 @@ int uwsgi_perl_request(struct wsgi_request *wsgi_req) {
 		return -1;
 	}
 
-	if (uwsgi_parse_vars(wsgi_req)) { // todo remove after dbg so iproto should already converted to uwsgi 
+	if (uwsgi_parse_vars(wsgi_req)) {
 		return -1;
 	}
 

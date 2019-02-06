@@ -670,6 +670,7 @@ class uConf(object):
         self.gcc_list.append('proto/fastcgi')
         self.gcc_list.append('proto/scgi')
         self.gcc_list.append('proto/puwsgi')
+        if self.get('iproto'): self.gcc_list.append('proto/iproto')
         self.include_path = []
 
         if 'UWSGI_INCLUDES' in os.environ:
@@ -765,6 +766,7 @@ class uConf(object):
 
         self.ldflags = os.environ.get("LDFLAGS", "").split()
         self.libs = ['-lpthread', '-lm', '-rdynamic']
+        if self.get('iproto'): self.libs += '-lcbor'
         if uwsgi_os in ('Linux', 'GNU', 'GNU/kFreeBSD'):
             self.libs.append('-ldl')
         if uwsgi_os == 'GNU/kFreeBSD':

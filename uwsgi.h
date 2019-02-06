@@ -3626,6 +3626,9 @@ int uwsgi_proto_ssl_accept(struct wsgi_request *, int);
 void uwsgi_proto_ssl_close(struct wsgi_request *);
 #endif
 uint64_t proto_base_add_uwsgi_header(struct wsgi_request *, char *, uint16_t, char *, uint16_t);
+
+uint16_t unsafe_add_uwsgi_var_chunk_length(char *, uint16_t);
+uint16_t unsafe_add_uwsgi_var_chunk(char *, char *, uint16_t);
 uint64_t proto_base_add_uwsgi_var(struct wsgi_request *, char *, uint16_t, char *, uint16_t);
 
 // protocols
@@ -3634,6 +3637,11 @@ void uwsgi_proto_puwsgi_setup(struct uwsgi_socket *);
 void uwsgi_proto_raw_setup(struct uwsgi_socket *);
 void uwsgi_proto_http_setup(struct uwsgi_socket *);
 void uwsgi_proto_http11_setup(struct uwsgi_socket *);
+
+#ifdef IPROTO
+void uwsgi_proto_iproto_setup(struct uwsgi_socket *);
+#endif
+
 #ifdef UWSGI_SSL
 void uwsgi_proto_https_setup(struct uwsgi_socket *);
 void uwsgi_proto_suwsgi_setup(struct uwsgi_socket *);
@@ -3769,6 +3777,7 @@ void uwsgi_set_processname(char *);
 void http_url_decode4(char *, uint16_t *, char *, int);
 #define http_url_decode(x, y, z) http_url_decode4(x, y, z, 0)
 
+int check_byte_need_url_encode(char c);
 void http_url_encode(char *, uint16_t *, char *);
 
 pid_t uwsgi_fork(char *);
