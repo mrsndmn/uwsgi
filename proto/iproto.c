@@ -3,6 +3,8 @@
 #include "cbor.h"
 #include <uwsgi.h>
 
+// todo do not close iproto connection! use request_id to map the requests
+
 struct __attribute__ ((packed)) iproto_header {
 	int32_t type;
 	int32_t body_length;

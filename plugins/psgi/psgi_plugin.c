@@ -628,7 +628,6 @@ static void psgi_call_cleanup_hook(SV *hook, SV *env) {
 }
 
 void uwsgi_perl_after_request(struct wsgi_request *wsgi_req) {
-	uwsgi_log("In uwsgi_perl_after_request\n");
 	log_request(wsgi_req);
 
 	// We may be called after an early exit in XS_coroae_accept_request, 

@@ -14,7 +14,7 @@ if not coroapi:
     print "unable to find the Coro perl module !!!"
     sys.exit(1)
 
-CFLAGS = os.popen('perl -MExtUtils::Embed -e ccopts').read().rstrip().split()
+CFLAGS = [ cf for cf in os.popen('perl -MExtUtils::Embed -e ccopts').read().rstrip().split() if not cf.startswith("-fstack") and not cf.startswith("-specs") ]
 CFLAGS += ['-Wno-int-to-pointer-cast', '-Wno-error=format', '-Wno-error=int-to-pointer-cast', '-I%s/Coro' % coroapi]
 LDFLAGS = []
 LIBS = []
