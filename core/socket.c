@@ -2033,8 +2033,5 @@ void uwsgi_protocols_register() {
 	uwsgi_register_protocol("scgi", uwsgi_proto_scgi_setup);
 	uwsgi_register_protocol("scgi-nph", uwsgi_proto_scgi_nph_setup);
 
-#ifdef IPROTO
-	uwsgi_register_protocol("iproto", uwsgi_proto_iproto_setup);
-#endif
 	uwsgi_register_protocol("raw", uwsgi_proto_raw_setup);
 }

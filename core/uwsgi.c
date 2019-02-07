@@ -39,13 +39,6 @@ static struct uwsgi_option uwsgi_base_options[] = {
 	{"socket", required_argument, 's', "bind to the specified UNIX/TCP socket using default protocol", uwsgi_opt_add_socket, NULL, 0},
 	{"uwsgi-socket", required_argument, 's', "bind to the specified UNIX/TCP socket using uwsgi protocol", uwsgi_opt_add_socket, "uwsgi", 0},
 
-#ifdef IPROTO
-	{"iproto-socket", required_argument, 0, "bind to the specified UNIX/TCP socket using RAW protocol", uwsgi_opt_add_socket, "iproto", 0},
-	{"iproto-modifier1", required_argument, 0, "force the specified modifier1 when using RAW protocol", uwsgi_opt_set_64bit, &uwsgi.raw_modifier1, 0},
-	{"iproto-modifier2", required_argument, 0, "force the specified modifier2 when using RAW protocol", uwsgi_opt_set_64bit, &uwsgi.raw_modifier2, 0},
-#endif
-
-
 #ifdef UWSGI_SSL
 	{"suwsgi-socket", required_argument, 0, "bind to the specified UNIX/TCP socket using uwsgi protocol over SSL", uwsgi_opt_add_ssl_socket, "suwsgi", 0},
 	{"ssl-socket", required_argument, 0, "bind to the specified UNIX/TCP socket using uwsgi protocol over SSL", uwsgi_opt_add_ssl_socket, "suwsgi", 0},

@@ -771,11 +771,6 @@ class uConf(object):
             self.cflags.append('-D__GNU_kFreeBSD__')
             self.libs.append('-lbsd')
 
-        if os.environ.get('UWSGI_IPROTO'):
-            self.libs.append('-lcbor')
-            self.gcc_list.append('proto/iproto')
-            self.cflags.append("-DIPROTO")
-
         # check for inherit option
         inherit = self.get('inherit')
         if inherit:
@@ -1440,7 +1435,6 @@ def build_plugin(path, uc, cflags, ldflags, libs, name=None):
 
     p_cflags = cflags[:]
     p_cflags += up['CFLAGS']
-    # p_cflags += '-DIPROTO'
 
     p_ldflags = ldflags[:]
     p_ldflags += up['LDFLAGS']
