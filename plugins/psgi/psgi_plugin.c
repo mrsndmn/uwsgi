@@ -72,7 +72,7 @@ struct uwsgi_option uwsgi_perl_options[] = {
         {"psgi-enable-psgix-io", no_argument, 0, "enable psgix.io support", uwsgi_opt_true, &uperl.enable_psgix_io, 0},
         {"perl-no-die-catch", no_argument, 0, "do not catch $SIG{__DIE__}", uwsgi_opt_true, &uperl.no_die_catch, 0},
         {"perl-local-lib", required_argument, 0, "set perl locallib path", uwsgi_opt_set_str, &uperl.locallib, 0},
-#ifdef PERL_VERSION_STRING
+#ifdef PERL_VERSION_STRINGq
         {"perl-version", no_argument, 0, "print perl version", uwsgi_opt_print, PERL_VERSION_STRING, UWSGI_OPT_IMMEDIATE},
 #endif
         {"perl-args", required_argument, 0, "add items (space separated) to @ARGV", uwsgi_opt_set_str, &uperl.argv_items, 0},
