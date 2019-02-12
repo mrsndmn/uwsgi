@@ -167,7 +167,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 			uint16_t probable_len = wsgi_req->len + 1 + klen + 1 + vlen; // min length
 			uwsgi_log("cur_len = %d, probable_len = %d\n", wsgi_req->len, probable_len);
 			// max length
-			if(probable_len + 2*vlen <= uwsgi.buffer_size) {
+			if( (uint64_t)(probable_len + 2*vlen) <= uwsgi.buffer_size) {
 				wsgi_req->len += append_buffer_encoded_param(wsgi_req->buffer + wsgi_req->len, kp, klen, vp, vlen, i); // 1 + klen  + 1 + vlen;
 			}
 			else if (probable_len > uwsgi.buffer_size) { // no chance to write it to uwsgi buffer
