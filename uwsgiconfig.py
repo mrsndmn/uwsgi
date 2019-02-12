@@ -1556,7 +1556,7 @@ def build_plugin(path, uc, cflags, ldflags, libs, name=None):
         ' '.join(uniq_warnings(p_ldflags)),
         ' '.join(uniq_warnings(p_libs))
     )
-    print_compilation_output("[%s] %s.so %s" % (GCC, plugin_dest, gccline), gccline)
+    print_compilation_output("[%s] %s.so" % (GCC, plugin_dest), gccline)
 
     ret = os.system(gccline)
     if ret != 0:
