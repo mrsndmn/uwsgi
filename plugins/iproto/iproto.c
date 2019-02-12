@@ -76,7 +76,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 
 	struct iproto_header *ih = (struct iproto_header *) wsgi_req->proto_parser_buf;
 
-	cbor_item_t* cbor_items[3] = { NULL, NULL, NULL };
+	cbor_item_t* cbor_items[4] = { NULL, NULL, NULL, NULL };
 
 	struct cbor_load_result result;
 	cbor_item_t* iproto_body = cbor_load(wsgi_req->proto_parser_buf + ih_len, ih->body_length, &result);
@@ -95,17 +95,30 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 		return -1;
 	}
 
-	if(!cbor_isa_array(iproto_body) || cbor_array_size(iproto_body) != 2) {
-		uwsgi_log("iproto: body must be type of cbor array: [ '/path/', { param1 => value1, param2 => value2 ... } ]!\n");
+	if(!cbor_isa_array(iproto_body) || cbor_array_size(iproto_body) != 3) {
+		uwsgi_log("iproto: body must be type of cbor array: [ 'myhost.ru', '/path/', { param1 => value1, param2 => value2 ... } ]!\n");
 		clear_cbor(cbor_items, 1);
 		return -1;
 	}
 
-	cbor_item_t* path = cbor_array_get(iproto_body, 0);
-	cbor_items[1] = path;
+	cbor_item_t* host = cbor_array_get(iproto_body, 0);
+	cbor_items[1] = host;
+	if(!cbor_isa_bytestring(host)) {
+		uwsgi_log("iproto: cbor: invalid host\n");
+		clear_cbor(cbor_items, 2);
+		return -1;
+	}
+
+	// todo check here is nothing awful
+	char* host_ptr = (char *) cbor_bytestring_handle(host);
+	wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "HTTP_HOST", 9, host_ptr, cbor_bytestring_length(host));
+	uwsgi_log("cbor path is %s\n", host_ptr);
+
+	cbor_item_t* path = cbor_array_get(iproto_body, 1);
+	cbor_items[2] = path;
 	if(!cbor_isa_bytestring(path)) {
 		uwsgi_log("iproto: cbor: invalid path\n");
-		clear_cbor(cbor_items, 2);
+		clear_cbor(cbor_items, 3);
 		return -1;
 	}
 
@@ -114,11 +127,11 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 	wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "PATH_INFO", 9, path_ptr, cbor_bytestring_length(path));
 	uwsgi_log("cbor path is %s\n", path_ptr);
 
-	cbor_item_t* params = cbor_array_get(iproto_body, 1);
-	cbor_items[2] = params;
+	cbor_item_t* params = cbor_array_get(iproto_body, 2);
+	cbor_items[3] = params;
 	if(!cbor_isa_map(params)) {
 		uwsgi_log("iproto: cbor: invalid params\n");
-		clear_cbor(cbor_items, 3);
+		clear_cbor(cbor_items, 4);
 		return -1;
 	}
 
