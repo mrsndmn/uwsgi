@@ -535,14 +535,11 @@ clear2:
 int uwsgi_perl_add_app(struct wsgi_request *wsgi_req, char *app_name, PerlInterpreter **interpreters, SV **callables, time_t now) {
 	int id = uwsgi_apps_cnt;
         struct uwsgi_app *wi = NULL;
-	uwsgi_log("\n\nIN uwsgi_perl_add_app");
         if (wsgi_req) {
-		uwsgi_log("\n\nIN uwsgi_perl_add_app with wsgi_req");
                 // we need a copy of app_id
                 wi = uwsgi_add_app(id, psgi_plugin.modifier1, uwsgi_concat2n(wsgi_req->appid, wsgi_req->appid_len, "", 0), wsgi_req->appid_len, interpreters, callables);
         }
         else {
-		uwsgi_log("\n\nIN uwsgi_perl_add_app without wsgi_req");
                 wi = uwsgi_add_app(id, psgi_plugin.modifier1, "", 0, interpreters, callables);
         }
 
