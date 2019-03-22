@@ -1,4 +1,3 @@
-// todo do not close iproto connection! use request_id to map the requests
 // https://github.com/tarantool/tarantool/blob/stable/doc/box-protocol.txt
 
 #include "cbor.h"
@@ -71,7 +70,7 @@ int append_buffer_encoded_param(char* buffer, char* kp, uint16_t klen, char* vp,
 	return query_str_len_delta;
 }
 
-// todo подумать надо структурой. Может быть плохо с параметрами, которые должны быть отмортированы, если порядок параметров важен...
+// hash param can cause problems if params order is significant
 int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 
 	struct iproto_header *ih = (struct iproto_header *) wsgi_req->proto_parser_buf;
@@ -96,11 +95,13 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 	}
 
 	if(!cbor_isa_array(iproto_body) || cbor_array_size(iproto_body) != 3) {
+		// todo allow not inly hashmaps but also arrays
 		uwsgi_log("iproto: body must be type of cbor array: [ 'myhost.ru', '/path/', { param1 => value1, param2 => value2 ... } ]!\n");
 		clear_cbor(cbor_items, 1);
 		return -1;
 	}
 
+	// HOST
 	cbor_item_t* host = cbor_array_get(iproto_body, 0);
 	cbor_items[1] = host;
 	if(!cbor_isa_bytestring(host)) {
@@ -109,11 +110,12 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 		return -1;
 	}
 
-	// todo check here is nothing awful
 	char* host_ptr = (char *) cbor_bytestring_handle(host);
 	wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "HTTP_HOST", 9, host_ptr, cbor_bytestring_length(host));
 	uwsgi_log("cbor path is %s\n", host_ptr);
 
+
+	// PATH
 	cbor_item_t* path = cbor_array_get(iproto_body, 1);
 	cbor_items[2] = path;
 	if(!cbor_isa_bytestring(path)) {
@@ -122,7 +124,6 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 		return -1;
 	}
 
-	// todo check here is nothing awful
 	char* path_ptr = (char *) cbor_bytestring_handle(path);
 	wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "PATH_INFO", 9, path_ptr, cbor_bytestring_length(path));
 	uwsgi_log("cbor path is %s\n", path_ptr);
@@ -135,11 +136,12 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 		return -1;
 	}
 
+	// working on request_url = path + query_string
 	uwsgi_log("cbor handling params\n");
 	struct cbor_pair *handle = cbor_map_handle(params);
-
 	wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "REQUEST_URI", 11, path_ptr, cbor_bytestring_length(path));
 
+	// adding each parameter one by one
 	if(cbor_map_size(params) > 0) {
 		size_t i;
 		uint16_t klen = 0, vlen = 0, j = 0;
@@ -149,12 +151,9 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 		for (i=0; i < cbor_map_size(params); i++) {
 			if(!cbor_isa_bytestring(handle[i].key) || ! cbor_isa_bytestring(handle[i].value)){
 				uwsgi_log("iproto: cbor: params map keys and values must be byte string\n");
-				clear_cbor(cbor_items, 3); //todo test it
+				clear_cbor(cbor_items, 3);
 				return -1;
 			}
-
-			//cbor_items[3] = ;
-			//cbor_items[4] = ;
 
 			kp = (char *) cbor_bytestring_handle(handle[i].key);
 			vp = (char *) cbor_bytestring_handle(handle[i].value);
@@ -173,7 +172,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 			}
 
 			// here we have to urlencode params values. Thus vlen could increase(maximum length may increase by 3 times).
-			// If it will not increas as much that we cant write to buffer we will write rihgt there.
+			// If it will not increas as much as we cant write to buffer we will write rihgt there.
 			// Else fallback to writing it by chunk..
 			// 2 + 2 bytes for lengths
 			//                                    '?|&'  key  '='  param
@@ -208,6 +207,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 		uint16_t query_string_len = (wsgi_req->buffer + wsgi_req->len) - question_mark_ptr + 1;
 		uwsgi_debug("query_string_len %d\n", query_string_len);
 		unsafe_add_uwsgi_var_chunk_length(fix_req_uri_length_ptr, cbor_bytestring_length(path) + query_string_len);
+
 		wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "QUERY_STRING", 12, question_mark_ptr, query_string_len);
 		clear_cbor(cbor_items, 3);
 	}
@@ -306,6 +306,7 @@ end:
 		return NULL;
 }
 
+// its importnt that body length (Content-Length) must be calculated in app
 struct uwsgi_buffer *uwsgi_proto_iproto_add_header(struct wsgi_request *wsgi_req, char *k, uint16_t kl, char *v, uint16_t vl) {
 	uwsgi_log("uwsgi_proto_iproto_add_header(): kl = %d, vl = %d value %.*s\n", kl, vl, vl, v);
 
