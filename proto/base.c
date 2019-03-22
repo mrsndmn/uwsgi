@@ -9,8 +9,8 @@ int uwsgi_proto_raw_parser(struct wsgi_request *wsgi_req) {
 	return UWSGI_OK;
 }
 
-// before using you must be shure that buffer has as much free mem as you need. And you are copying into the right pointer.
-// pay attention that pointer will be changed insode the function
+// before using you must be sure that buffer has as much free mem as you need. And you are copying into the right pointer.
+// pay attention that pointer will be changed inside the function
 // returns length of appended chars
 uint16_t unsafe_add_uwsgi_var_chunk_length(char *ptr, uint16_t chunk_len) {
 	*ptr++ = (uint8_t) (chunk_len & 0xff);
@@ -18,8 +18,8 @@ uint16_t unsafe_add_uwsgi_var_chunk_length(char *ptr, uint16_t chunk_len) {
 	return 2;
 }
 
-// before using you must be shure that buffer has as much free mem as you need. And you are copying into the right pointer.
-// pay attention that pointer will be changed insode the function
+// before using you must be sure that buffer has as much free mem as you need. And you are copying into the right pointer.
+// pay attention that pointer will be changed inside the function
 // returns length of appended chars
 uint16_t unsafe_add_uwsgi_var_chunk(char *ptr, char *chunk, uint16_t chunk_len) {
 	ptr += unsafe_add_uwsgi_var_chunk_length(ptr, chunk_len);
