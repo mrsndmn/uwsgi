@@ -535,7 +535,6 @@ clear2:
 int uwsgi_perl_add_app(struct wsgi_request *wsgi_req, char *app_name, PerlInterpreter **interpreters, SV **callables, time_t now) {
 	int id = uwsgi_apps_cnt;
         struct uwsgi_app *wi = NULL;
-
         if (wsgi_req) {
                 // we need a copy of app_id
                 wi = uwsgi_add_app(id, psgi_plugin.modifier1, uwsgi_concat2n(wsgi_req->appid, wsgi_req->appid_len, "", 0), wsgi_req->appid_len, interpreters, callables);

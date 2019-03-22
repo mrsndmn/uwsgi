@@ -97,6 +97,8 @@ int uwsgi_buffer_u8(struct uwsgi_buffer *ub, uint8_t u8) {
 }
 
 int uwsgi_buffer_append(struct uwsgi_buffer *ub, char *buf, size_t len) {
+	if(len == 0)
+		return 0;
 
 	size_t remains = ub->len - ub->pos;
 

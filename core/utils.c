@@ -4337,13 +4337,18 @@ char *uwsgi_str_to_hex(char *src, size_t slen) {
 	return dst;
 }
 
+
+int check_byte_need_url_encode(char c) {
+	return !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~' || c == '/');
+}
+
 // dst has to be 3 times buf size (USE IT ONLY FOR PATH_INFO !!!)
 void http_url_encode(char *buf, uint16_t * len, char *dst) {
 
 	uint16_t i;
 	char *ptr = dst;
 	for (i = 0; i < *len; i++) {
-		if ((buf[i] >= 'A' && buf[i] <= 'Z') || (buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= '0' && buf[i] <= '9') || buf[i] == '-' || buf[i] == '_' || buf[i] == '.' || buf[i] == '~' || buf[i] == '/') {
+		if (!check_byte_need_url_encode(buf[i])) {
 			*ptr++ = buf[i];
 		}
 		else {
