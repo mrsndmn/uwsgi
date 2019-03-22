@@ -82,21 +82,20 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 	cbor_items[0] = iproto_body;
 
 	if (result.error.code != CBOR_ERR_NONE) {
-		uwsgi_log( "iproto cbor: there was an error while reading the input near byte %zu (read %zu bytes in total): ", result.error.position, result.read);
+		uwsgi_error( "iproto cbor: there was an error while reading the input near byte %zu (read %zu bytes in total): ", result.error.position, result.read);
 		switch (result.error.code) {
-		case CBOR_ERR_MALFORMATED:		{ uwsgi_log("Malformed data\n"); break; }
-		case CBOR_ERR_MEMERROR:			{ uwsgi_log("Memory error -- perhaps the input is too large?\n"); break; }
-		case CBOR_ERR_NODATA:			{ uwsgi_log("The input is empty\n"); break; }
-		case CBOR_ERR_NOTENOUGHDATA:	{ uwsgi_log("Data seem to be missing -- is the input complete?\n"); break; }
-		case CBOR_ERR_SYNTAXERROR:		{ uwsgi_log( "Syntactically malformed data -- see http://tools.ietf.org/html/rfc7049\n"); break; }
+		case CBOR_ERR_MALFORMATED:		{ uwsgi_error("Malformed data\n"); break; }
+		case CBOR_ERR_MEMERROR:			{ uwsgi_error("Memory error -- perhaps the input is too large?\n"); break; }
+		case CBOR_ERR_NODATA:			{ uwsgi_error("The input is empty\n"); break; }
+		case CBOR_ERR_NOTENOUGHDATA:	{ uwsgi_error("Data seem to be missing -- is the input complete?\n"); break; }
+		case CBOR_ERR_SYNTAXERROR:		{ uwsgi_error( "Syntactically malformed data -- see http://tools.ietf.org/html/rfc7049\n"); break; }
 		case CBOR_ERR_NONE:				{ break; }
 		}
 		return -1;
 	}
 
 	if(!cbor_isa_array(iproto_body) || cbor_array_size(iproto_body) != 3) {
-		// todo allow not inly hashmaps but also arrays
-		uwsgi_log("iproto: body must be type of cbor array: [ 'myhost.ru', '/path/', { param1 => value1, param2 => value2 ... } ]!\n");
+		uwsgi_error("iproto: body must be type of cbor array: [ 'myhost.ru', '/path/', { param1 => value1, param2 => value2 ... } ]!\n");
 		clear_cbor(cbor_items, 1);
 		return -1;
 	}
@@ -105,39 +104,36 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 	cbor_item_t* host = cbor_array_get(iproto_body, 0);
 	cbor_items[1] = host;
 	if(!cbor_isa_bytestring(host)) {
-		uwsgi_log("iproto: cbor: invalid host\n");
+		uwsgi_error("iproto: cbor: invalid host\n");
 		clear_cbor(cbor_items, 2);
 		return -1;
 	}
 
 	char* host_ptr = (char *) cbor_bytestring_handle(host);
 	wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "HTTP_HOST", 9, host_ptr, cbor_bytestring_length(host));
-	uwsgi_log("cbor path is %s\n", host_ptr);
 
 
 	// PATH
 	cbor_item_t* path = cbor_array_get(iproto_body, 1);
 	cbor_items[2] = path;
 	if(!cbor_isa_bytestring(path)) {
-		uwsgi_log("iproto: cbor: invalid path\n");
+		uwsgi_error("iproto: cbor: invalid path\n");
 		clear_cbor(cbor_items, 3);
 		return -1;
 	}
 
 	char* path_ptr = (char *) cbor_bytestring_handle(path);
 	wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "PATH_INFO", 9, path_ptr, cbor_bytestring_length(path));
-	uwsgi_log("cbor path is %s\n", path_ptr);
 
 	cbor_item_t* params = cbor_array_get(iproto_body, 2);
 	cbor_items[3] = params;
 	if(!cbor_isa_map(params)) {
-		uwsgi_log("iproto: cbor: invalid params\n");
+		uwsgi_error("iproto: cbor: invalid params\n");
 		clear_cbor(cbor_items, 4);
 		return -1;
 	}
 
 	// working on request_url = path + query_string
-	uwsgi_log("cbor handling params\n");
 	struct cbor_pair *handle = cbor_map_handle(params);
 	wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "REQUEST_URI", 11, path_ptr, cbor_bytestring_length(path));
 
@@ -150,7 +146,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 
 		for (i=0; i < cbor_map_size(params); i++) {
 			if(!cbor_isa_bytestring(handle[i].key) || ! cbor_isa_bytestring(handle[i].value)){
-				uwsgi_log("iproto: cbor: params map keys and values must be byte string\n");
+				uwsgi_error("iproto: cbor: params map keys and values must be byte string\n");
 				clear_cbor(cbor_items, 3);
 				return -1;
 			}
@@ -160,12 +156,13 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 
 			klen = cbor_bytestring_length(handle[i].key);
 			vlen = cbor_bytestring_length(handle[i].value);
+		#ifdef UWSGI_DEBUG
 			uwsgi_debug("key %d %.*s, value %d %.*s\n", klen, klen, kp, vlen, vlen, vp);
-
+		#endif
 			// keys cant be encoded
 			for(j = 0; j < klen; j++) {
 				if(check_byte_need_url_encode(*(kp + j))) {
-					uwsgi_log("iproto: cbor: params keys keys cant be url encoded!\n");
+					uwsgi_error("iproto: cbor: params keys keys cant be url encoded!\n");
 					clear_cbor(cbor_items, 3);
 					return -1;
 				}
@@ -177,13 +174,15 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 			// 2 + 2 bytes for lengths
 			//                                    '?|&'  key  '='  param
 			uint16_t probable_len = wsgi_req->len + 1 + klen + 1 + vlen; // min length
-			uwsgi_log("cur_len = %d, probable_len = %d\n", wsgi_req->len, probable_len);
+		#ifdef UWSGI_DEBUG
+			uwsgi_debug("cur_len = %d, probable_len = %d\n", wsgi_req->len, probable_len);
+		#endif
 			// max length
 			if( (uint64_t)(probable_len + 2*vlen) <= uwsgi.buffer_size) {
 				wsgi_req->len += append_buffer_encoded_param(wsgi_req->buffer + wsgi_req->len, kp, klen, vp, vlen, i); // 1 + klen  + 1 + vlen;
 			}
 			else if (probable_len > uwsgi.buffer_size) { // no chance to write it to uwsgi buffer
-				uwsgi_log("iproto: cbor: cbor cant be placed into buffer\n");
+				uwsgi_error("iproto: cbor: cbor cant be placed into buffer\n");
 				clear_cbor(cbor_items, 3);
 				return -1;
 			}
@@ -192,7 +191,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 					if(check_byte_need_url_encode(*(vp + j))) {
 						probable_len += 2;
 						if(probable_len > uwsgi.buffer_size) {
-							uwsgi_log("iproto: cbor: cbor cant be placed into buffer\n");
+							uwsgi_error("iproto: cbor: cbor cant be placed into buffer\n");
 							clear_cbor(cbor_items, 3);
 							return -1;
 						}
@@ -205,20 +204,21 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 		//                           uri ptr           var size               path         '?'
 		char* question_mark_ptr = fix_req_uri_length_ptr + 2 + cbor_bytestring_length(path) + 1;
 		uint16_t query_string_len = (wsgi_req->buffer + wsgi_req->len) - question_mark_ptr + 1;
+	#ifdef UWSGI_DEBUG
 		uwsgi_debug("query_string_len %d\n", query_string_len);
+	#endif
 		unsafe_add_uwsgi_var_chunk_length(fix_req_uri_length_ptr, cbor_bytestring_length(path) + query_string_len);
 
 		wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "QUERY_STRING", 12, question_mark_ptr, query_string_len);
 		clear_cbor(cbor_items, 3);
 	}
-
-	uwsgi_log("iproto cbor is ok\n");
-
+#ifdef UWSGI_DEBUG
+	uwsgi_debug("iproto cbor is ok\n");
+#endif
 	return UWSGI_OK;
 }
 
 static int uwsgi_proto_iproto_parser(struct wsgi_request *wsgi_req) {
-	uwsgi_log("In parse iproto! ppos %d\n\n", wsgi_req->proto_parser_pos);
 
 	if (!wsgi_req->proto_parser_buf) {
 		wsgi_req->proto_parser_buf = uwsgi_malloc(uwsgi.buffer_size);
@@ -245,7 +245,9 @@ static int uwsgi_proto_iproto_parser(struct wsgi_request *wsgi_req) {
 		if (wsgi_req->proto_parser_pos >= req_len) {
 			if(req_len == ih_len) {
 				struct iproto_header *ih = (struct iproto_header *) wsgi_req->proto_parser_buf;
-				uwsgi_log("In parse iproto: ih_len = %d, type = %d, body_len = %d, req_id = %d \n", ih_len, ih->type, ih->body_length, ih->request_id);
+			#ifdef UWSGI_DEBUG
+				uwsgi_debug("In parse iproto: ih_len = %d, type = %d, body_len = %d, req_id = %d \n", ih_len, ih->type, ih->body_length, ih->request_id);
+			#endif
 
 				char *tmp = uwsgi_num2str(ih->type); // tmp is 11 bytes length buffer
 				wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "IPROTO_TYPE",        11, tmp, strlen(tmp));
@@ -264,9 +266,7 @@ static int uwsgi_proto_iproto_parser(struct wsgi_request *wsgi_req) {
 			}
 
 			if (wsgi_req->proto_parser_pos > req_len) {
-				// wsgi_req->proto_parser_remains     = wsgi_req->proto_parser_pos - ih_len;
-				// wsgi_req->proto_parser_remains_buf = wsgi_req->buffer + ih_len;
-				uwsgi_log("Invalid iproto body_length!\n");
+				uwsgi_error("Invalid iproto body_length!\n");
 				return -1;
 			}
 
@@ -281,19 +281,22 @@ static int uwsgi_proto_iproto_parser(struct wsgi_request *wsgi_req) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
 			return UWSGI_AGAIN;
 		}
-		uwsgi_error("uwsgi_proto_uwsgi_parser()");
+		uwsgi_error("uwsgi_proto_iproto_parser()");
 		return -1;
 	}
 	// 0 len
 	if (wsgi_req->proto_parser_pos > 0) {
-		uwsgi_error("uwsgi_proto_uwsgi_parser()");
+		uwsgi_error("uwsgi_proto_iproto_parser()");
 	}
 	return -1;
 }
 
 
 struct uwsgi_buffer *uwsgi_proto_iproto_prepare_headers(struct wsgi_request *wsgi_req, char *s, uint16_t sl) {
-	uwsgi_log("uwsgi_proto_iproto_prepare_headers(): %d\n", wsgi_req->status);
+
+#ifdef UWSGI_DEBUG
+	uwsgi_debug("uwsgi_proto_iproto_prepare_headers(): %d\n", wsgi_req->status);
+#endif
 	struct uwsgi_buffer *ub = uwsgi_buffer_new( ih_len + 4 ); // <response> ::= <header><return_code>{<response_body>}
 	// just cpoying headers from request but dont foreget to update response_body
 	struct iproto_header *ih = (struct iproto_header *) wsgi_req->proto_parser_buf;
@@ -308,16 +311,19 @@ end:
 
 // its importnt that body length (Content-Length) must be calculated in app
 struct uwsgi_buffer *uwsgi_proto_iproto_add_header(struct wsgi_request *wsgi_req, char *k, uint16_t kl, char *v, uint16_t vl) {
+#ifdef UWSGI_DEBUG
 	uwsgi_log("uwsgi_proto_iproto_add_header(): kl = %d, vl = %d value %.*s\n", kl, vl, vl, v);
+#endif
 
 	if(!uwsgi_strnicmp(k, kl, "Content-Length", 14)) {
 		struct iproto_header *ih = (struct iproto_header *) wsgi_req->headers->buf;
 
 		int body_length = uwsgi_str_num(v, vl);
 		ih->body_length = body_length;
-		uwsgi_log("current body length %d\n", ih->body_length);
+	#ifdef UWSGI_DEBUG
+		uwsgi_debug("current body length %d\n", ih->body_length);
+	#endif
 
-		// wsgi_req->headers = (struct uwsgi_buffer *) ih;
 	}
 	return uwsgi_buffer_new(0);
 }
@@ -352,6 +358,4 @@ struct uwsgi_plugin iproto_plugin = {
 	.name = "iproto",
 	.options = iproto_options,
 	.on_load = iproto_register_proto,
-	// .init = http_init,
-	// .on_load = http_setup,
 };
