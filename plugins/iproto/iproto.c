@@ -39,7 +39,7 @@ char* iproto_type2_method(int32_t type){
 	}
 }
 
-int clear_cbor(cbor_item_t** cbor_items, size_t cnt) {
+int clean_cbor(cbor_item_t** cbor_items, size_t cnt) {
 	size_t i = 0;
 	for(i = 0; i < cnt; i++) {
 		if(cbor_items + i * sizeof(cbor_item_t*)) {
@@ -96,7 +96,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 
 	if(!cbor_isa_array(iproto_body) || cbor_array_size(iproto_body) != 3) {
 		uwsgi_error("iproto: body must be type of cbor array: [ 'myhost.ru', '/path/', { param1 => value1, param2 => value2 ... } ]!\n");
-		clear_cbor(cbor_items, 1);
+		clean_cbor(cbor_items, 1);
 		return -1;
 	}
 
@@ -105,7 +105,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 	cbor_items[1] = host;
 	if(!cbor_isa_bytestring(host)) {
 		uwsgi_error("iproto: cbor: invalid host\n");
-		clear_cbor(cbor_items, 2);
+		clean_cbor(cbor_items, 2);
 		return -1;
 	}
 
@@ -118,7 +118,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 	cbor_items[2] = path;
 	if(!cbor_isa_bytestring(path)) {
 		uwsgi_error("iproto: cbor: invalid path\n");
-		clear_cbor(cbor_items, 3);
+		clean_cbor(cbor_items, 3);
 		return -1;
 	}
 
@@ -129,7 +129,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 	cbor_items[3] = params;
 	if(!cbor_isa_map(params)) {
 		uwsgi_error("iproto: cbor: invalid params\n");
-		clear_cbor(cbor_items, 4);
+		clean_cbor(cbor_items, 4);
 		return -1;
 	}
 
@@ -147,7 +147,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 		for (i=0; i < cbor_map_size(params); i++) {
 			if(!cbor_isa_bytestring(handle[i].key) || ! cbor_isa_bytestring(handle[i].value)){
 				uwsgi_error("iproto: cbor: params map keys and values must be byte string\n");
-				clear_cbor(cbor_items, 3);
+				clean_cbor(cbor_items, 4);
 				return -1;
 			}
 
@@ -163,17 +163,17 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 			for(j = 0; j < klen; j++) {
 				if(check_byte_need_url_encode(*(kp + j))) {
 					uwsgi_error("iproto: cbor: params keys keys cant be url encoded!\n");
-					clear_cbor(cbor_items, 3);
+					clean_cbor(cbor_items, 4);
 					return -1;
 				}
 			}
 
 			// here we have to urlencode params values. Thus vlen could increase(maximum length may increase by 3 times).
-			// If it will not increas as much as we cant write to buffer we will write rihgt there.
+			// If it will not be increased as much as we are able to write to buffer we will do it.
 			// Else fallback to writing it by chunk..
 			// 2 + 2 bytes for lengths
 			//                                    '?|&'  key  '='  param
-			uint16_t probable_len = wsgi_req->len + 1 + klen + 1 + vlen; // min length
+			uint16_t probable_len = wsgi_req->len + 1 + klen + 1 + vlen; // min length. It can be increased while urle_ncoding
 		#ifdef UWSGI_DEBUG
 			uwsgi_debug("cur_len = %d, probable_len = %d\n", wsgi_req->len, probable_len);
 		#endif
@@ -183,7 +183,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 			}
 			else if (probable_len > uwsgi.buffer_size) { // no chance to write it to uwsgi buffer
 				uwsgi_error("iproto: cbor: cbor cant be placed into buffer\n");
-				clear_cbor(cbor_items, 3);
+				clean_cbor(cbor_items, 4);
 				return -1;
 			}
 			else {// will compute real encoded length
@@ -192,7 +192,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 						probable_len += 2;
 						if(probable_len > uwsgi.buffer_size) {
 							uwsgi_error("iproto: cbor: cbor cant be placed into buffer\n");
-							clear_cbor(cbor_items, 3);
+							clean_cbor(cbor_items, 4);
 							return -1;
 						}
 					}
@@ -210,7 +210,7 @@ int iproto_check_cbor(struct wsgi_request *wsgi_req) {
 		unsafe_add_uwsgi_var_chunk_length(fix_req_uri_length_ptr, cbor_bytestring_length(path) + query_string_len);
 
 		wsgi_req->len += proto_base_add_uwsgi_var(wsgi_req, "QUERY_STRING", 12, question_mark_ptr, query_string_len);
-		clear_cbor(cbor_items, 3);
+		clean_cbor(cbor_items, 4);
 	}
 #ifdef UWSGI_DEBUG
 	uwsgi_debug("iproto cbor is ok\n");
